@@ -200,7 +200,7 @@
         });
       },
       retrieveParents: function() {
-        let url = `${this.$api.BASE_URL}/${this.$api.URL_PROJECT}`;
+        let url = `${this.$api.BASE_URL}/${this.$api.URL_PROJECT}?excludeInactive=true`;
         this.axios.get(url).then((response) => {
           for (let i = 0; i < response.data.length; i++) {
             let project = response.data[i];
