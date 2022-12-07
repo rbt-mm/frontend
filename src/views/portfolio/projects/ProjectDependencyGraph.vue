@@ -1,5 +1,7 @@
 <template>
   <div style="overflow-x: hidden; overflow-y: hidden; cursor: grab" @mousedown="mouseDownHandler">
+    <c-switch style="margin-left:1.5rem; margin-right:.5rem" id="fetchRepositoryMetaData" color="primary" v-model="fetchRepositoryMetaData" label v-bind="labelIcon" />
+    <span class="text-muted">{{$t('message.show_update_information')}}</span><br>
     <vue2-org-tree
       :data="data"
       :horizontal="true"
@@ -17,13 +19,16 @@
 <script>
 import Vue2OrgTree from 'vue2-org-tree'
 import permissionsMixin from "../../../mixins/permissionsMixin";
+import xssFilters from "xss-filters";
+import { Switch as cSwitch } from '@coreui/vue';
 
 let pos = { top: 0, left: 0, x: 0, y: 0};
 
 export default {
   mixins: [permissionsMixin],
   components: {
-    Vue2OrgTree
+    Vue2OrgTree,
+    cSwitch
   },
   props: {
     project: Object,
@@ -35,7 +40,12 @@ export default {
       nodeId: 0,
       expandAll: true,
       horizontal: false,
-      collapsable: true
+      collapsable: true,
+      fetchRepositoryMetaData: false,
+      labelIcon: {
+        dataOn: '\u2713',
+        dataOff: '\u2715'
+      }
     }
   },
   watch: {
@@ -81,7 +91,6 @@ export default {
           x: event.clientX,
           y: event.clientY,
         }
-        console.log("pos: %o", pos)
         document.addEventListener('mousemove', this.mouseMoveHandlerMiddleMouseButton)
         document.addEventListener("mouseup", this.mouseUpHandler)
       }
@@ -130,6 +139,7 @@ export default {
       return {
         id: this.nodeId,
         label: this.createNodeLabel(dependency),
+        version: dependency.version,
         objectType: dependency.objectType,
         uuid: dependency.uuid,
         fetchedChildren: false,
@@ -141,6 +151,7 @@ export default {
         let url = this.getDependencyUrl(dependency);
         let response = await this.axios.get(url);
         let data = response.data;
+        treeNode.repositoryMeta = data.repositoryMeta
         if (data && data.directDependencies) {
           let jsonObject = JSON.parse(data.directDependencies)
           for (let i = 0; i < jsonObject.length; i++){
@@ -155,7 +166,7 @@ export default {
     },
     getDependencyUrl(dependency) {
       if (dependency.objectType === "COMPONENT") {
-        return `${this.$api.BASE_URL}/${this.$api.URL_COMPONENT}/${dependency.uuid}`;
+        return `${this.$api.BASE_URL}/${this.$api.URL_COMPONENT}/${dependency.uuid}?includeRepositoryMetaData=true`;
       } else {
         return `${this.$api.BASE_URL}/${this.$api.URL_SERVICE}/${dependency.uuid}`;
       }
@@ -183,7 +194,11 @@ export default {
       return 'clickable-node'
     },
     renderContent: function(h, data) {
-      return data.label
+      if (this.fetchRepositoryMetaData && data.repositoryMeta && data.repositoryMeta.latestVersion && data.repositoryMeta.latestVersion !== data.version) {
+        return (<div style="white-space: nowrap;">{data.label + ' '}<i id={"icon"+data.id} class="fa fa-exclamation-triangle status-warning" aria-hidden="true"></i><b-tooltip target={"icon"+data.id} triggers="hover" noninteractive="noninteractive">{"Risk: Outdated component. Current version is: "+ xssFilters.inHTMLData(data.repositoryMeta.latestVersion)}</b-tooltip></div>)
+      } else {
+        return (<div>{data.label}</div>)
+      }
     },
     onExpand: async function (e, data) {
       if ('expand' in data) {

@@ -408,7 +408,8 @@
     "component_firmware": "Firmware",
     "component_file": "File",
     "dates": "Dates",
-    "reindex": "Rebuild index(es)"
+    "reindex": "Rebuild index(es)",
+    "show_update_information": "Show update information"
   },
   "admin": {
     "configuration": "Configuration",
